@@ -36,6 +36,8 @@ namespace Base.PackageInstaller.Editor
             if (existingPath == targetPath)
                 return targetPath;
 
+            DeleteGeneratedWrapper(existingPath);
+
             string moveError = AssetDatabase.MoveAsset(existingPath, targetPath);
 
             if (string.IsNullOrEmpty(moveError))
@@ -43,6 +45,32 @@ namespace Base.PackageInstaller.Editor
 
             Debug.LogError($"Could not move input asset to {targetPath}: {moveError}");
             return null;
+        }
+
+        private static void DeleteGeneratedWrapper(string assetPath)
+        {
+            AssetImporter importer = AssetImporter.GetAtPath(assetPath);
+
+            if (importer == null)
+                return;
+
+            SerializedObject so = new(importer);
+
+            SerializedProperty generateProp = so.FindProperty("m_GenerateWrapperCode");
+            SerializedProperty pathProp = so.FindProperty("m_WrapperCodePath");
+
+            if (generateProp == null || !generateProp.boolValue)
+                return;
+
+            string wrapperPath = pathProp != null ? pathProp.stringValue : string.Empty;
+
+            if (string.IsNullOrEmpty(wrapperPath))
+                wrapperPath = Path.ChangeExtension(assetPath, ".cs");
+
+            if (!File.Exists(wrapperPath))
+                return;
+
+            AssetDatabase.DeleteAsset(wrapperPath);
         }
 
         private static string CreateNewAsset(string targetPath)

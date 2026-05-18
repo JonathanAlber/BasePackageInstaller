@@ -10,6 +10,7 @@ namespace Base.PackageInstaller.Editor
         private const string AssetNamespaceToken = "__ASSET_NAMESPACE__";
 
         private const string Template = @"using Base.SystemsCorePackage.Services;
+using Input;
     
 namespace __NAMESPACE__
 {

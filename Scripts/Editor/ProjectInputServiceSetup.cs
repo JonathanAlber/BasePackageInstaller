@@ -12,12 +12,11 @@ namespace Base.PackageInstaller.Editor
     public static class ProjectInputServiceSetup
     {
         private const string AssetsPrefix = "Assets/";
-        private const string ScriptsPrefix = "Scripts.";
 
         private const string AssetFolder = "Assets/Input";
         private const string AssetName = "PlayerInputActions";
 
-        private const string ServiceFolder = "Assets/Scripts/Input";
+        private const string ServiceFolder = "Assets/Generated/Input";
         private const string ServiceFileName = "ProjectInputService.cs";
 
         private static readonly string ServicePath = $"{ServiceFolder}/{ServiceFileName}";
@@ -56,9 +55,6 @@ namespace Base.PackageInstaller.Editor
                 folder = folder[AssetsPrefix.Length..];
 
             string ns = folder.Replace('/', '.');
-
-            if (ns.StartsWith(ScriptsPrefix))
-                ns = ns.Substring(ScriptsPrefix.Length);
 
             return ns;
         }
