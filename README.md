@@ -1,6 +1,6 @@
 # BaseProjectPackageInstaller
 
-A small Unity tool that makes installing my [BaseProjectPackages](https://github.com/JonathanAlber/BaseProjectPackages) quick and painless. No more copy-pasting Git URLs one by on, just click a menu item and you're set.
+A small Unity tool that makes installing my [BaseProjectPackages](https://github.com/JonathanAlber/BaseProjectPackages) quick and painless. No need to copy-paste Git URLs one by one, just click the menu item and you're set.
 
 ## Installation
 
