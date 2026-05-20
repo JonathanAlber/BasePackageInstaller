@@ -28,10 +28,7 @@ namespace Base.PackageInstaller.Editor
         private string _status;
 
         [MenuItem("Tools/Base Package Installer")]
-        public static void ShowWindow()
-        {
-            GetWindow<BasePackageInstallerWindow>("Base Package Installer");
-        }
+        public static void ShowWindow() => GetWindow<BasePackageInstallerWindow>("Base Package Installer");
 
         private void OnEnable()
         {
@@ -62,6 +59,30 @@ namespace Base.PackageInstaller.Editor
 
             EditorGUILayout.Space(4);
             EditorGUILayout.HelpBox(_status, _installer.IsInstalling ? MessageType.Info : MessageType.None);
+        }
+
+        private static void DrawProjectSetupSection()
+        {
+            EditorGUILayout.LabelField("Project Setup", EditorStyles.boldLabel);
+            EditorGUILayout.Space(4);
+
+            bool alreadySetUp = ProjectInputServiceSetup.IsSetUp;
+
+            string label = alreadySetUp
+                ? "ProjectInputService — already set up"
+                : "Create ProjectInputService";
+
+            EditorGUI.BeginDisabledGroup(alreadySetUp);
+
+            if (GUILayout.Button(label, GUILayout.Height(30)))
+                ProjectInputServiceSetup.Run();
+
+            EditorGUI.EndDisabledGroup();
+        }
+
+        private static void HandlePackageInstalled(string packageName)
+        {
+            Debug.Log($"{nameof(BasePackageInstallerWindow)}: Installed {packageName} successfully.");
         }
 
         private void DrawPackagesSection()
@@ -97,25 +118,6 @@ namespace Base.PackageInstaller.Editor
             EditorGUI.EndDisabledGroup();
         }
 
-        private void DrawProjectSetupSection()
-        {
-            EditorGUILayout.LabelField("Project Setup", EditorStyles.boldLabel);
-            EditorGUILayout.Space(4);
-
-            bool alreadySetUp = ProjectInputServiceSetup.IsSetUp;
-
-            string label = alreadySetUp
-                ? "ProjectInputService — already set up"
-                : "Create ProjectInputService";
-
-            EditorGUI.BeginDisabledGroup(alreadySetUp);
-
-            if (GUILayout.Button(label, GUILayout.Height(30)))
-                ProjectInputServiceSetup.Run();
-
-            EditorGUI.EndDisabledGroup();
-        }
-
         private void SetAllSelected(bool value)
         {
             for (int i = 0; i < _selected.Length; i++)
@@ -139,11 +141,6 @@ namespace Base.PackageInstaller.Editor
         {
             _status = $"Installing: {url.Split('/').Last()}...";
             Repaint();
-        }
-
-        private void HandlePackageInstalled(string packageName)
-        {
-            Debug.Log($"{nameof(BasePackageInstallerWindow)}: Installed {packageName} successfully.");
         }
 
         private void HandlePackageFailed(string error)

@@ -12,14 +12,33 @@ namespace Base.PackageInstaller.Editor
     /// </summary>
     public class PackageInstaller
     {
+        /// <summary>
+        /// Invoked when the installation of a package starts, with the package URL as an argument.
+        /// </summary>
         public event Action<string> OnPackageStarted;
+
+        /// <summary>
+        /// Invoked when a package is successfully installed, with the package name as an argument.
+        /// </summary>
         public event Action<string> OnPackageInstalled;
+
+        /// <summary>
+        /// Invoked when a package installation fails, with the error message as an argument.
+        /// </summary>
         public event Action<string> OnPackageFailed;
+
+        /// <summary>
+        /// Invoked when all packages in the queue have been processed, regardless of success or failure.
+        /// </summary>
         public event Action OnAllPackagesInstalled;
 
+        /// <summary>
+        /// Indicates whether the installer is currently processing a queue of packages.
+        /// </summary>
         public bool IsInstalling { get; private set; }
 
         private readonly Queue<string> _queue = new();
+
         private AddRequest _currentRequest;
 
         public void Install(IEnumerable<string> packageUrls)
