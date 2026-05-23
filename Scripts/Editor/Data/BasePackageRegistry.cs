@@ -1,5 +1,5 @@
 #if UNITY_EDITOR
-namespace Base.PackageInstaller.Editor
+namespace Base.PackageInstaller.Editor.Data
 {
     /// <summary>
     /// Shared registry of base packages.

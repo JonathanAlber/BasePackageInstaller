@@ -1,5 +1,5 @@
 #if UNITY_EDITOR
-namespace Base.PackageInstaller.Editor
+namespace Base.PackageInstaller.Editor.ProjectInput
 {
     /// <summary>
     /// Template for the generated <c>ProjectInputService.cs</c> file.

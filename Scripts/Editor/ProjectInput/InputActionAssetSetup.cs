@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Base.PackageInstaller.Editor
+namespace Base.PackageInstaller.Editor.ProjectInput
 {
     /// <summary>
     /// Finds, creates and configures the project's <see cref="InputActionAsset"/>.

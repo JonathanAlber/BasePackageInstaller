@@ -3,7 +3,7 @@ using System.IO;
 using UnityEditor;
 using UnityEngine;
 
-namespace Base.PackageInstaller.Editor
+namespace Base.PackageInstaller.Editor.ProjectInput
 {
     /// <summary>
     /// Sets up the project's input service: configures the input action asset

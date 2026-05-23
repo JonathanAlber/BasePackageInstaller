@@ -2,7 +2,7 @@
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
 
-namespace Base.PackageInstaller.Editor
+namespace Base.PackageInstaller.Editor.Operations
 {
     /// <summary>
     /// Installs packages sequentially by adding Git dependencies.
@@ -11,14 +11,6 @@ namespace Base.PackageInstaller.Editor
     {
         /// <inheritdoc/>
         protected override Request CreateRequest(string url) => Client.Add(url);
-
-        /// <inheritdoc/>
-        protected override string GetPackageName()
-        {
-            return CurrentRequest is AddRequest request
-                ? request.Result.name
-                : "Package";
-        }
     }
 }
 #endif
