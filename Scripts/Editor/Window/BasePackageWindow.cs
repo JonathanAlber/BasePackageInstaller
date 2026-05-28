@@ -62,6 +62,10 @@ namespace Base.PackageInstaller.Editor.Window
             _operation.OnPackageCompleted += HandlePackageCompleted;
             _operation.OnPackageFailed += HandlePackageFailed;
             _operation.OnAllPackagesCompleted += HandleAllPackagesCompleted;
+
+            // A package install can trigger a domain reload that re-creates this window and
+            // its operation. Resume here so an interrupted run continues where it left off.
+            _operation.Resume();
         }
 
         private void OnDisable()

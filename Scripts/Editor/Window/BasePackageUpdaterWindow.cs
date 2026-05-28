@@ -31,7 +31,7 @@ namespace Base.PackageInstaller.Editor.Window
         /// <inheritdoc/>
         protected override string OtherWindowLabel => "Open Installer";
 
-        [MenuItem("Tools/Base Package Installer/Updater")]
+        [MenuItem("Tools/Base Packages/Updater", priority = 3)]
         public static void ShowWindow() => GetWindow<BasePackageUpdaterWindow>("Base Package Updater");
 
         /// <inheritdoc/>

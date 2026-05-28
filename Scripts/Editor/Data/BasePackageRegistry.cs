@@ -15,6 +15,7 @@ namespace Base.PackageInstaller.Editor.Data
             new("Utility", "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Utility"),
             new("ScreenShake", "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/ScreenShake"),
             new("Save System", "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/SaveSystem"),
+            new("Settings System", "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Settings"),
         };
     }
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Base.PackageInstaller.Editor.Data;
+using Base.PackageInstaller.Editor.Operations.Persistence;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -12,6 +13,12 @@ namespace Base.PackageInstaller.Editor.Operations
 {
     /// <summary>
     /// Base class for sequential package operations.
+    /// <para>
+    /// Adding a Git package that contains scripts triggers a recompile and therefore a
+    /// domain reload, which wipes all non-serialized state. To survive this, progress is
+    /// mirrored into <see cref="PackageOperationStore"/> after every step and the run is
+    /// continued via <see cref="Resume"/> once the domain has reloaded.
+    /// </para>
     /// </summary>
     public abstract class PackageOperation
     {
@@ -51,6 +58,13 @@ namespace Base.PackageInstaller.Editor.Operations
         private Request _currentRequest;
         private string _currentLabel;
         private ListRequest _listRequest;
+        private bool _hasSnapshot;
+
+        /// <summary>
+        /// The key under which this operation's progress is persisted.
+        /// Each concrete operation type gets its own slot so independent runs never collide.
+        /// </summary>
+        private string PersistenceKey => GetType().Name;
 
         /// <summary>
         /// Starts processing the given package URLs sequentially.
@@ -62,9 +76,7 @@ namespace Base.PackageInstaller.Editor.Operations
             if (IsRunning)
                 return;
 
-            _queue.Clear();
-            _results.Clear();
-            _installed.Clear();
+            ResetState();
 
             foreach (string url in packageUrls)
                 _queue.Enqueue(url);
@@ -74,11 +86,45 @@ namespace Base.PackageInstaller.Editor.Operations
 
             IsRunning = true;
 
-            // Snapshot the currently installed packages first so we can report
-            // version changes and detect packages that are already up to date.
-            _listRequest = Client.List(offlineMode: true, includeIndirectDependencies: false);
+            Persist();
 
-            EditorApplication.update += OnSnapshotProgress;
+            BeginSnapshot();
+        }
+
+        /// <summary>
+        /// Resumes a run that was interrupted by a domain reload, if one is pending.
+        /// Safe to call when nothing is running; it then does nothing.
+        /// </summary>
+        /// <remarks>
+        /// Call this after the owner is re-created following a domain reload
+        /// (for example from an editor window's <c>OnEnable</c>).
+        /// </remarks>
+        public void Resume()
+        {
+            if (IsRunning)
+                return;
+
+            if (!PackageOperationStore.TryLoad(PersistenceKey, out PackageOperationState state))
+                return;
+
+            ResetState();
+
+            foreach (string url in state.RemainingUrls)
+                _queue.Enqueue(url);
+
+            _results.AddRange(state.GetResults());
+
+            foreach (KeyValuePair<string, InstalledPackage> pair in state.GetSnapshot())
+                _installed[pair.Key] = pair.Value;
+
+            _hasSnapshot = state.HasSnapshot;
+
+            IsRunning = true;
+
+            if (_hasSnapshot)
+                ProcessNext();
+            else
+                BeginSnapshot();
         }
 
         /// <summary>
@@ -87,6 +133,25 @@ namespace Base.PackageInstaller.Editor.Operations
         /// <param name="url">The URL of the package to process.</param>
         /// <returns>A request object representing the package operation.</returns>
         protected abstract Request CreateRequest(string url);
+
+        private void ResetState()
+        {
+            _queue.Clear();
+            _results.Clear();
+            _installed.Clear();
+
+            _currentRequest = null;
+            _currentLabel = null;
+            _listRequest = null;
+            _hasSnapshot = false;
+        }
+
+        private void BeginSnapshot()
+        {
+            _listRequest = Client.List(offlineMode: false, includeIndirectDependencies: false);
+
+            EditorApplication.update += OnSnapshotProgress;
+        }
 
         private void OnSnapshotProgress()
         {
@@ -100,6 +165,9 @@ namespace Base.PackageInstaller.Editor.Operations
                     _installed[info.name] = new InstalledPackage(info.version, info.git?.hash);
 
             _listRequest = null;
+            _hasSnapshot = true;
+
+            Persist();
 
             ProcessNext();
         }
@@ -112,7 +180,7 @@ namespace Base.PackageInstaller.Editor.Operations
                 return;
             }
 
-            string url = _queue.Dequeue();
+            string url = _queue.Peek();
 
             _currentLabel = GetLabel(url);
 
@@ -142,6 +210,11 @@ namespace Base.PackageInstaller.Editor.Operations
             }
 
             _results.Add(result);
+
+            _queue.Dequeue();
+            _currentRequest = null;
+
+            Persist();
 
             if (result.Success)
                 OnPackageCompleted?.Invoke(result);
@@ -206,7 +279,15 @@ namespace Base.PackageInstaller.Editor.Operations
 
             IsRunning = false;
 
+            PackageOperationStore.Clear(PersistenceKey);
+
             OnAllPackagesCompleted?.Invoke(summary);
+        }
+
+        private void Persist()
+        {
+            PackageOperationState state = PackageOperationState.Create(_queue, _results, _installed, _hasSnapshot);
+            PackageOperationStore.Save(PersistenceKey, state);
         }
 
         private static bool HasChanged(InstalledPackage previous, PackageInfo info)
