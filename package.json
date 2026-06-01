@@ -2,7 +2,7 @@
   "name": "com.baseprojectpackages.installer",
   "displayName": "Base Package Installer",
   "description": "One-click installer for all base project packages.",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "unity": "6000.3",
   "author": {
     "name": "Jonathan Alber"

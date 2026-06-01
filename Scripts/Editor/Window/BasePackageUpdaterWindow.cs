@@ -26,7 +26,7 @@ namespace Base.PackageInstaller.Editor.Window
         protected override string VerbPast => "Updated";
 
         /// <inheritdoc/>
-        protected override string UnchangedPhrase => "already up to date";
+        protected override string UnchangedPhrase => "is already up to date";
 
         /// <inheritdoc/>
         protected override string OtherWindowLabel => "Open Installer";

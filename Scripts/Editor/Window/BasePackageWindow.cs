@@ -235,6 +235,9 @@ namespace Base.PackageInstaller.Editor.Window
             if (string.IsNullOrEmpty(result.PreviousVersion))
                 return $"{VerbPast} {resultName} {result.Version}.";
 
+            if (result.PreviousVersion == result.Version)
+                return $"{resultName} {UnchangedPhrase} ({result.Version}).";
+
             return $"{VerbPast} {resultName} {result.PreviousVersion} → {result.Version}.";
         }
 
