@@ -1,63 +1,52 @@
-using System.Linq;
-
 #if UNITY_EDITOR
+using System.Collections.Generic;
+using System.Linq;
+using UnityEditor;
+using UnityEngine;
+
 namespace Base.PackageInstaller.Editor.Data
 {
     /// <summary>
-    /// Shared registry of base packages.
+    /// Editor-only registry of base packages, persisted per project in
+    /// <c>ProjectSettings/BasePackageRegistry.asset</c> so it can be version controlled.
+    /// <para>
+    /// Seeded with <see cref="BasePackageDefaults"/> on first creation; consumers can then
+    /// add, remove or edit entries via Project Settings → "Base Packages".
+    /// </para>
     /// </summary>
-    public static class BasePackageRegistry
+    [FilePath("ProjectSettings/BasePackageRegistry.asset", FilePathAttribute.Location.ProjectFolder)]
+    public sealed class BasePackageRegistry : ScriptableSingleton<BasePackageRegistry>
     {
-        public static readonly PackageEntry[] Packages =
-        {
-            new
-            (
-                "Tools",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Tools"
-            ),
-            new
-            (
-                "Attributes",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Attributes"
-            ),
-            new
-            (
-                "Systems",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Systems"
-            ),
-            new
-            (
-                "UI",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/UI"
-            ),
-            new
-            (
-                "Utility",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Utility"
-            ),
-            new
-            (
-                "ScreenShake",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/ScreenShake"
-            ),
-            new
-            (
-                "Save System",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/SaveSystem"
-            ),
-            new
-            (
-                "Settings System",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Settings"
-            ),
-            new
-            (
-                "Localization",
-                "https://github.com/JonathanAlber/BaseProjectPackages.git?path=BaseProject/Packages/Localization"
-            ),
-        };
+        [SerializeField] private bool seeded;
+        [SerializeField] private List<PackageEntry> packages = new();
 
-        public static readonly PackageEntry[] SortedPackages = Packages.OrderBy(p => p.Name).ToArray();
+        /// <summary>The registered packages in declaration order.</summary>
+        public IReadOnlyList<PackageEntry> Packages
+        {
+            get
+            {
+                EnsureSeeded();
+                return packages;
+            }
+        }
+
+        /// <summary>The registered packages sorted alphabetically by name.</summary>
+        public IReadOnlyList<PackageEntry> SortedPackages => Packages.OrderBy(entry => entry.Name).ToArray();
+
+        /// <summary>Writes the registry back to disk after edits.</summary>
+        public void Persist() => Save(true);
+
+        private void EnsureSeeded()
+        {
+            if (seeded)
+                return;
+
+            if (packages.Count == 0)
+                packages.AddRange(BasePackageDefaults.Create());
+
+            seeded = true;
+            Save(true);
+        }
     }
 }
 #endif

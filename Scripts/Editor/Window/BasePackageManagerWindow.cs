@@ -1,66 +1,47 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Base.PackageInstaller.Editor.Data;
 using Base.PackageInstaller.Editor.Operations;
+using Base.PackageInstaller.Editor.ProjectInput;
+using Base.PackageInstaller.Editor.Settings;
 using UnityEditor;
 using UnityEngine;
 
 namespace Base.PackageInstaller.Editor.Window
 {
     /// <summary>
-    /// Shared editor window logic for installing and updating base packages.
+    /// Editor window for managing base packages. Adds the selected packages as Git
+    /// dependencies, installing any that are missing and updating any that are already
+    /// present to the latest remote version in a single action.
     /// </summary>
-    public abstract class BasePackageWindow : EditorWindow
+    public sealed class BasePackageManagerWindow : EditorWindow
     {
-        private readonly bool[] _selected = Enumerable.Repeat(true, BasePackageRegistry.Packages.Length).ToArray();
+        private const string WindowTitle = "Base Package Manager";
+        private const string Description = "Installs the selected base packages or updates them to the latest remote " +
+                                           "version if they are already installed.";
+
+        private const string ActionLabel = "Install / Update Selected";
+        private const string ProgressVerb = "Processing";
+        private const string UnchangedPhrase = "is already up to date";
 
         private string _status;
         private bool _hasFailures;
         private Vector2 _scroll;
 
+        private PackageEntry[] _packages;
+        private bool[] _selected;
+
         private PackageOperation _operation;
 
-        /// <summary>The bold header shown above the help box.</summary>
-        protected abstract string Title { get; }
-
-        /// <summary>The help text shown below the header.</summary>
-        protected abstract string Description { get; }
-
-        /// <summary>The label of the main action button (e.g. "Install Selected").</summary>
-        protected abstract string ActionLabel { get; }
-
-        /// <summary>Present-continuous verb used in progress messages (e.g. "Installing").</summary>
-        protected abstract string VerbContinuous { get; }
-
-        /// <summary>Past-tense verb used in result messages (e.g. "Installed").</summary>
-        protected abstract string VerbPast { get; }
-
-        /// <summary>Phrase used when a package did not change (e.g. "already up to date").</summary>
-        protected abstract string UnchangedPhrase { get; }
-
-        /// <summary>The label of the button that opens the other window.</summary>
-        protected abstract string OtherWindowLabel { get; }
-
-        /// <summary>
-        /// Creates the package operation backing this window.
-        /// </summary>
-        /// <returns>A new package operation instance.</returns>
-        protected abstract PackageOperation CreateOperation();
-
-        private PackageEntry[] _packages;
-
-        /// <summary>
-        /// Opens the companion window (the updater opens the installer and vice versa).
-        /// </summary>
-        protected abstract void OpenOtherWindow();
+        [MenuItem("Tools/Base Package Installer", priority = -15)]
+        public static void ShowWindow() => GetWindow<BasePackageManagerWindow>(WindowTitle);
 
         private void OnEnable()
         {
-            _packages = BasePackageRegistry.SortedPackages;
+            RefreshPackages();
 
-            _operation ??= CreateOperation();
+            _operation ??= new GitPackageOperation();
 
             _operation.OnPackageStarted += HandlePackageStarted;
             _operation.OnPackageCompleted += HandlePackageCompleted;
@@ -82,17 +63,15 @@ namespace Base.PackageInstaller.Editor.Window
 
         private void OnGUI()
         {
-            DrawNavigation();
-
             DrawPackagesSection();
 
             EditorGUILayout.Space(12);
 
-            DrawExtraSections();
+            DrawProjectSetupSection();
 
             EditorGUILayout.Space(8);
 
-            EditorGUILayout.LabelField(Title, EditorStyles.boldLabel);
+            EditorGUILayout.LabelField(WindowTitle, EditorStyles.boldLabel);
 
             EditorGUILayout.Space(4);
 
@@ -106,29 +85,26 @@ namespace Base.PackageInstaller.Editor.Window
             EditorGUILayout.HelpBox(_status, GetStatusMessageType());
         }
 
-        /// <summary>
-        /// Draws window-specific sections. Override to add extra controls.
-        /// </summary>
-        protected virtual void DrawExtraSections()
+        private void RefreshPackages()
         {
-        }
+            _packages = new List<PackageEntry>(BasePackageRegistry.instance.SortedPackages).ToArray();
+            _selected = new bool[_packages.Length];
 
-        private void DrawNavigation()
-        {
-            EditorGUILayout.BeginHorizontal();
-
-            if (GUILayout.Button(OtherWindowLabel, GUILayout.Width(140)))
-                OpenOtherWindow();
-
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Space(4);
+            for (int i = 0; i < _selected.Length; i++)
+                _selected[i] = true;
         }
 
         private void DrawPackagesSection()
         {
-            EditorGUILayout.Space(8);
+            EditorGUILayout.BeginHorizontal();
+
             EditorGUILayout.LabelField("Base Packages", EditorStyles.boldLabel);
+
+            if (GUILayout.Button("Edit List", GUILayout.Width(80)))
+                SettingsService.OpenProjectSettings(BasePackageSettingsProvider.Path);
+
+            EditorGUILayout.EndHorizontal();
+
             EditorGUILayout.Space(4);
 
             _scroll = EditorGUILayout.BeginScrollView(_scroll);
@@ -156,6 +132,25 @@ namespace Base.PackageInstaller.Editor.Window
 
             if (GUILayout.Button(ActionLabel, GUILayout.Height(30)))
                 StartOperation();
+
+            EditorGUI.EndDisabledGroup();
+        }
+
+        private void DrawProjectSetupSection()
+        {
+            EditorGUILayout.LabelField("Project Setup", EditorStyles.boldLabel);
+            EditorGUILayout.Space(4);
+
+            bool alreadySetUp = ProjectInputServiceSetup.IsSetUp;
+
+            string label = alreadySetUp
+                ? "ProjectInputService — already set up"
+                : "Create ProjectInputService";
+
+            EditorGUI.BeginDisabledGroup(alreadySetUp);
+
+            if (GUILayout.Button(label, GUILayout.Height(30)))
+                ProjectInputServiceSetup.Run();
 
             EditorGUI.EndDisabledGroup();
         }
@@ -192,20 +187,20 @@ namespace Base.PackageInstaller.Editor.Window
 
         private void HandlePackageStarted(string label)
         {
-            _status = $"{VerbContinuous}: {label}...";
+            _status = $"{ProgressVerb}: {label}...";
             Repaint();
         }
 
         private void HandlePackageCompleted(PackageResult result)
         {
-            Debug.Log($"{GetType().Name}: {DescribeResult(result)}", null);
+            Debug.Log($"{WindowTitle}: {DescribeResult(result)}", null);
         }
 
         private void HandlePackageFailed(PackageResult result)
         {
             _hasFailures = true;
 
-            Debug.LogWarning($"{GetType().Name}: {DescribeResult(result)}", null);
+            Debug.LogWarning($"{WindowTitle}: {DescribeResult(result)}", null);
         }
 
         private void HandleAllPackagesCompleted(OperationSummary summary)
@@ -214,9 +209,9 @@ namespace Base.PackageInstaller.Editor.Window
             _status = BuildSummary(summary);
 
             if (summary.HasFailures)
-                Debug.LogWarning($"{GetType().Name}: {_status}", null);
+                Debug.LogWarning($"{WindowTitle}: {_status}", null);
             else
-                Debug.Log($"{GetType().Name}: {_status}", null);
+                Debug.Log($"{WindowTitle}: {_status}", null);
 
             Repaint();
         }
@@ -231,18 +226,15 @@ namespace Base.PackageInstaller.Editor.Window
                 : result.Name;
 
             if (string.IsNullOrEmpty(result.Version))
-                return $"{VerbPast} {resultName}.";
+                return $"Installed {resultName}.";
 
-            if (!result.Changed)
+            if (!result.Changed || result.PreviousVersion == result.Version)
                 return $"{resultName} {UnchangedPhrase} ({result.Version}).";
 
             if (string.IsNullOrEmpty(result.PreviousVersion))
-                return $"{VerbPast} {resultName} {result.Version}.";
+                return $"Installed {resultName} {result.Version}.";
 
-            if (result.PreviousVersion == result.Version)
-                return $"{resultName} {UnchangedPhrase} ({result.Version}).";
-
-            return $"{VerbPast} {resultName} {result.PreviousVersion} → {result.Version}.";
+            return $"Updated {resultName} {result.PreviousVersion} → {result.Version}.";
         }
 
         private string BuildSummary(OperationSummary summary)
