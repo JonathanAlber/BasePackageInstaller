@@ -11,7 +11,7 @@ namespace Base.PackageInstaller.Editor.Settings
     /// </summary>
     internal static class BasePackageSettingsProvider
     {
-        private const string SettingsPath = "Project/Custom Tools/Base Packages";
+        private const string SettingsPath = "Project/Custom Tools/Git Packages";
         private const string PackagesProperty = "packages";
 
         /// <summary>
@@ -27,7 +27,7 @@ namespace Base.PackageInstaller.Editor.Settings
 
             return new SettingsProvider(SettingsPath, SettingsScope.Project)
             {
-                label = "Base Packages",
+                label = "Git Packages",
                 keywords = new HashSet<string> { "package", "git", "installer", "updater", "base" },
                 guiHandler = _ => DrawGui(serializedObject, packagesProperty)
             };
