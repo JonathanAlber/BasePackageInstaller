@@ -11,6 +11,8 @@ namespace Base.PackageInstaller.Editor.ProjectInput
 
         private const string Template = @"using Base.SystemsCorePackage.Services;
 using Input;
+using Base.AttributePackage;
+using UnityEngine.InputSystem;
     
 namespace __NAMESPACE__
 {
@@ -38,9 +40,26 @@ namespace __NAMESPACE__
 
             Actions?.Dispose();
         }
+
+        /// <summary>
+        /// Resolves a map against the package's runtime actions clone, so callers enable the
+        /// exact instance they subscribe to via <see cref=""BaseInputActions""/>.
+        /// </summary>
+        // ReSharper disable once MemberCanBePrivate.Global
+        public InputActionMap ResolveBaseMap(InputActionMapReference reference) => Actions.asset.FindActionMap(reference.MapId);
+
+        /// <summary>
+        /// Tries to resolve a map against the package's runtime actions clone, so callers enable the
+        /// exact instance they subscribe to via <see cref=""BaseInputActions""/>.
+        /// </summary>
+        /// <returns><c>>true</c> if the reference was valid and the map was resolved; otherwise, <c>false</c>.</returns>
+        public bool TryResolveBaseMap(InputActionMapReference reference, out InputActionMap map)
+        {
+            map = ResolveBaseMap(reference);
+            return map != null;
+        }
     }
-}
-";
+}";
 
         /// <summary>
         /// Renders the template, replacing tokens with the provided namespaces.
