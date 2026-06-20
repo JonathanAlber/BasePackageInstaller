@@ -3,7 +3,7 @@ namespace Base.PackageInstaller.Editor.Data
 {
     /// <summary>
     /// The default base packages seeded into a fresh <see cref="BasePackageRegistry"/>.
-    /// Other projects can edit the registry afterwards; these are only the starting set.
+    /// Other projects can edit the registry afterward; these are only the starting set.
     /// </summary>
     internal static class BasePackageDefaults
     {
@@ -25,6 +25,7 @@ namespace Base.PackageInstaller.Editor.Data
             new PackageEntry("Save System", $"{BaseUrl}SaveSystem"),
             new PackageEntry("Settings System", $"{BaseUrl}Settings"),
             new PackageEntry("Localization", $"{BaseUrl}Localization"),
+            new PackageEntry("Memory Profiler", $"{BaseUrl}MemoryProfiler")
         };
     }
 }

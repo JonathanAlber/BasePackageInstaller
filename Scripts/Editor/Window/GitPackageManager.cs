@@ -18,21 +18,20 @@ namespace Base.PackageInstaller.Editor.Window
     /// </summary>
     public sealed class GitPackageManager : EditorWindow
     {
-        private const string WindowTitle = "Git Package Manager";
-
-        private const string Description = "Installs the selected git packages or updates them to the latest remote " +
-                                           "version if they are already installed.";
+        private const string Description = "Installs the selected git packages or updates them to the latest remote "
+            + "version if they are already installed.";
 
         private const string InstallLabel = "Install Selected";
-        private const string UpdateLabel = "Update Selected";
         private const string InstallOrUpdateLabel = "Install / Update Selected";
-        private const string ProgressVerb = "Processing";
-        private const string UnchangedPhrase = "is already up to date";
         private const string MissingVersion = "—";
+        private const string ProgressVerb = "Processing";
+        private const float StatusWidth = 100f;
 
         private const float ToggleWidth = 18f;
-        private const float StatusWidth = 100f;
+        private const string UnchangedPhrase = "is already up to date";
+        private const string UpdateLabel = "Update Selected";
         private const float VersionWidth = 90f;
+        private const string WindowTitle = "Git Package Manager";
 
         private static readonly Color InstalledColor = new(0.40f, 0.78f, 0.40f);
         private static readonly Color NotInstalledColor = new(0.70f, 0.70f, 0.70f);
@@ -53,9 +52,7 @@ namespace Base.PackageInstaller.Editor.Window
         private PackageOperation _operation;
         private PackageStatusChecker _checker;
 
-        [MenuItem("Tools/Git Package Manager", priority = -15)]
-        public static void ShowWindow() => GetWindow<GitPackageManager>(WindowTitle);
-
+#region Unity Callbacks
         private void OnEnable()
         {
             RefreshPackages();
@@ -85,8 +82,6 @@ namespace Base.PackageInstaller.Editor.Window
             _checker.OnCompleted -= HandleStatusesReady;
         }
 
-        private void OnFocus() => RefreshStatuses();
-
         private void OnGUI()
         {
             EnsureStyles();
@@ -113,6 +108,12 @@ namespace Base.PackageInstaller.Editor.Window
             EditorGUILayout.HelpBox(_status, GetStatusMessageType());
         }
 
+        private void OnFocus() => RefreshStatuses();
+#endregion
+
+        [MenuItem("Tools/Git Package Manager", priority = -15)]
+        public static void ShowWindow() => GetWindow<GitPackageManager>(WindowTitle);
+
         private static void DrawTableHeader()
         {
             EditorGUILayout.BeginHorizontal();
@@ -133,9 +134,9 @@ namespace Base.PackageInstaller.Editor.Window
             EditorGUILayout.LabelField("Project Setup", EditorStyles.boldLabel);
             EditorGUILayout.Space(4);
 
-            const string label = "Create ProjectInputService";
+            const string Label = "Create ProjectInputService";
 
-            if (GUILayout.Button(label, GUILayout.Height(30)))
+            if (GUILayout.Button(Label, GUILayout.Height(30)))
                 ProjectInputServiceSetup.Run();
         }
 
@@ -144,8 +145,21 @@ namespace Base.PackageInstaller.Editor.Window
             if (_installedStyle != null)
                 return;
 
-            _installedStyle = new GUIStyle(EditorStyles.label) { normal = { textColor = InstalledColor } };
-            _notInstalledStyle = new GUIStyle(EditorStyles.label) { normal = { textColor = NotInstalledColor } };
+            _installedStyle = new GUIStyle(EditorStyles.label)
+            {
+                normal =
+                {
+                    textColor = InstalledColor
+                }
+            };
+
+            _notInstalledStyle = new GUIStyle(EditorStyles.label)
+            {
+                normal =
+                {
+                    textColor = NotInstalledColor
+                }
+            };
         }
 
         private void RefreshPackages()
@@ -162,10 +176,22 @@ namespace Base.PackageInstaller.Editor.Window
             if (_checker == null || _checker.IsRunning)
                 return;
 
-            if (_operation is { IsRunning: true })
+            if (_operation is
+                {
+                    IsRunning: true
+                })
                 return;
 
             _checker.Refresh();
+        }
+
+        // Pulls in any new or changed BasePackageDefaults, then re-checks install statuses.
+        private void RefreshAll()
+        {
+            if (BasePackageRegistry.instance.SyncWithDefaults())
+                RefreshPackages();
+
+            RefreshStatuses();
         }
 
         private void DrawPackagesSection()
@@ -175,7 +201,7 @@ namespace Base.PackageInstaller.Editor.Window
             EditorGUILayout.LabelField("Git Packages", EditorStyles.boldLabel);
 
             if (GUILayout.Button("Refresh", GUILayout.Width(70)))
-                RefreshStatuses();
+                RefreshAll();
 
             if (GUILayout.Button("Edit List", GUILayout.Width(80)))
                 SettingsService.OpenProjectSettings(BasePackageSettingsProvider.Path);
@@ -227,7 +253,9 @@ namespace Base.PackageInstaller.Editor.Window
 
             EditorGUILayout.LabelField(GetStatusText(status), GetStatusStyle(status), GUILayout.Width(StatusWidth));
 
-            string version = status.IsInstalled ? status.Version : MissingVersion;
+            string version = status.IsInstalled
+                ? status.Version
+                : MissingVersion;
 
             EditorGUILayout.LabelField(version, GUILayout.Width(VersionWidth));
 
@@ -235,9 +263,7 @@ namespace Base.PackageInstaller.Editor.Window
         }
 
         private PackageStatus GetStatus(PackageEntry entry)
-        {
-            return _statuses.GetValueOrDefault(PackageStatusChecker.Normalize(entry.Url));
-        }
+            => _statuses.GetValueOrDefault(PackageStatusChecker.Normalize(entry.Url));
 
         private string GetStatusText(PackageStatus status)
         {
@@ -298,8 +324,10 @@ namespace Base.PackageInstaller.Editor.Window
             List<string> urls = new();
 
             for (int i = 0; i < _packages.Length; i++)
+            {
                 if (_selected[i])
                     urls.Add(_packages[i].Url);
+            }
 
             _status = null;
             _hasFailures = false;
@@ -332,9 +360,7 @@ namespace Base.PackageInstaller.Editor.Window
         }
 
         private void HandlePackageCompleted(PackageResult result)
-        {
-            Debug.Log($"{WindowTitle}: {DescribeResult(result)}", null);
-        }
+            => Debug.Log($"{WindowTitle}: {DescribeResult(result)}", null);
 
         private void HandlePackageFailed(PackageResult result)
         {

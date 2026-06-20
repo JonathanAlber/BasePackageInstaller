@@ -20,8 +20,11 @@ namespace Base.PackageInstaller.Editor.Data
         [SerializeField] private bool seeded;
         [SerializeField] private List<PackageEntry> packages = new();
 
+        /// <summary>The registered packages sorted alphabetically by name.</summary>
+        public IReadOnlyList<PackageEntry> SortedPackages => Packages.OrderBy(entry => entry.Name).ToArray();
+
         /// <summary>The registered packages in declaration order.</summary>
-        public IReadOnlyList<PackageEntry> Packages
+        private IReadOnlyList<PackageEntry> Packages
         {
             get
             {
@@ -30,11 +33,44 @@ namespace Base.PackageInstaller.Editor.Data
             }
         }
 
-        /// <summary>The registered packages sorted alphabetically by name.</summary>
-        public IReadOnlyList<PackageEntry> SortedPackages => Packages.OrderBy(entry => entry.Name).ToArray();
-
         /// <summary>Writes the registry back to disk after edits.</summary>
         public void Persist() => Save(true);
+
+        /// <summary>
+        /// Re-applies <see cref="BasePackageDefaults"/> onto the registry so newly added or
+        /// changed defaults appear without discarding project-specific entries. Matches by
+        /// name: adds any missing default and updates the URL of an existing default that changed.
+        /// </summary>
+        /// <returns><c>true</c> when the registry changed and was saved.</returns>
+        public bool SyncWithDefaults()
+        {
+            EnsureSeeded();
+
+            bool changed = false;
+
+            foreach (PackageEntry defaultEntry in BasePackageDefaults.Create())
+            {
+                int index = packages.FindIndex(entry => entry.Name == defaultEntry.Name);
+
+                if (index < 0)
+                {
+                    packages.Add(defaultEntry);
+                    changed = true;
+                    continue;
+                }
+
+                if (packages[index].Url == defaultEntry.Url)
+                    continue;
+
+                packages[index] = defaultEntry;
+                changed = true;
+            }
+
+            if (changed)
+                Save(true);
+
+            return changed;
+        }
 
         private void EnsureSeeded()
         {
